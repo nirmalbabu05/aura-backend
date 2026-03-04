@@ -73,6 +73,20 @@ def delete_package(package_id):
         return jsonify({"message": f"Successfully deleted {package.title}!"}), 200
     return jsonify({"message": "Package not found!"}), 404
 
+
+# --- ADMIN LOGIN ROUTE ---
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+
+    # Ungalukku pudicha username & password set pannunga
+    if username == "admin" and password == "aura2026":
+        return jsonify({"success": True, "message": "Login Successful!"}), 200
+    else:
+        return jsonify({"success": False, "message": "Invalid Credentials!"}), 401
+
 # 5. Run Server
 if __name__ == '__main__':
     print("🚀 Aura Holidays API is running on http://127.0.0.1:5000")
