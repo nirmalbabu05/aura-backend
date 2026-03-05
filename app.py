@@ -73,6 +73,23 @@ def delete_package(package_id):
         return jsonify({"message": f"Successfully deleted {package.title}!"}), 200
     return jsonify({"message": "Package not found!"}), 404
 
+
+# Update/Edit a package by ID (Admin use)
+@app.route('/api/packages/<int:package_id>', methods=['PUT'])
+def update_package(package_id):
+    package = Package.query.get(package_id)
+    if package:
+        data = request.json
+        package.destination = data['destination']
+        package.title = data['title']
+        package.duration = data['duration']
+        package.price = data['price']
+        package.image = data['image']
+        db.session.commit()
+        return jsonify({"message": f"Successfully updated {package.title}!"}), 200
+    return jsonify({"message": "Package not found!"}), 404
+
+
 # --- ADMIN LOGIN ROUTE ---
 @app.route('/api/login', methods=['POST'])
 def login():
