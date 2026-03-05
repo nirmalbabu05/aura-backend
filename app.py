@@ -1,11 +1,21 @@
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+import os
 
 # 1. App Setup
 app = Flask(__name__)
 CORS(app) 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///holidays.db'
+
+# --- DATABASE CONFIGURATION ---
+# Supabase link-ai inga paste pannunga
+# Note: postgres:// nu irunthaal namma code automatic-aa postgresql:// nu mathidum
+raw_db_url = "UNGA_SUPABASE_URL_HERE" 
+
+if raw_db_url and raw_db_url.startswith("postgres://"):
+    raw_db_url = raw_db_url.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = raw_db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
