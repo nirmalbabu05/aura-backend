@@ -10,7 +10,7 @@ CORS(app)
 # --- DATABASE CONFIGURATION ---
 # Supabase link-ai inga paste pannunga
 # Note: postgres:// nu irunthaal namma code automatic-aa postgresql:// nu mathidum
-raw_db_url = "UNGA_SUPABASE_URL_HERE" 
+raw_db_url = "postgresql://postgres:IjBaKJuePSfm9Of5@db.aykexjolkcwxxznlkzia.supabase.co:5432/postgres" 
 
 if raw_db_url and raw_db_url.startswith("postgres://"):
     raw_db_url = raw_db_url.replace("postgres://", "postgresql://", 1)
