@@ -73,7 +73,6 @@ def delete_package(package_id):
         return jsonify({"message": f"Successfully deleted {package.title}!"}), 200
     return jsonify({"message": "Package not found!"}), 404
 
-
 # --- ADMIN LOGIN ROUTE ---
 @app.route('/api/login', methods=['POST'])
 def login():
@@ -86,6 +85,40 @@ def login():
         return jsonify({"success": True, "message": "Login Successful!"}), 200
     else:
         return jsonify({"success": False, "message": "Invalid Credentials!"}), 401
+
+# --- AURA AI CHATBOT ROUTE 🧠 ---
+@app.route('/api/chat', methods=['POST'])
+def chat_assistant():
+    try:
+        data = request.json
+        user_message = data.get('message', '').lower()
+
+        # 1. Basic Greetings
+        if any(word in user_message for word in ['hi', 'hello', 'hey', 'help', 'start']):
+            return jsonify({"reply": "Hello! 👋 I am the Aura AI Assistant. Tell me your dream destination (e.g., 'I want to go to Bali' or 'Do you have Paris packages?')."})
+
+        # 2. Fetch all real packages from the Database
+        all_packages = Package.query.all()
+
+        # 3. Simple Rule-Based NLP Logic
+        matched_packages = []
+        for pkg in all_packages:
+            if pkg.destination.lower() in user_message or pkg.title.lower() in user_message:
+                matched_packages.append(pkg)
+
+        # 4. Construct AI Response
+        if matched_packages:
+            reply = "I found some amazing options for you! ✈️<br><br>"
+            for p in matched_packages[:3]: # Shows top 3 matches to keep chat clean
+                reply += f"🔹 <b>{p.title}</b> ({p.duration}) - Starts at ₹{p.price}<br>"
+            reply += "<br>You can click 'Enquire Now' at the top to book these!"
+            return jsonify({"reply": reply})
+
+        # 5. Fallback Response
+        return jsonify({"reply": "I'm still learning! 🤖 I couldn't find a specific package for that right now. Try asking about our popular spots like <b>Paris, Bali, or Dubai</b>!"})
+
+    except Exception as e:
+        return jsonify({"reply": "Oops! My database brain is currently syncing. Try again in a minute! 🔄"}), 500
 
 # 5. Run Server
 if __name__ == '__main__':
