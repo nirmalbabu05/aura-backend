@@ -8,14 +8,15 @@ app = Flask(__name__)
 CORS(app) 
 
 # --- DATABASE CONFIGURATION ---
-# Supabase link-ai inga paste pannunga
-# Note: postgres:// nu irunthaal namma code automatic-aa postgresql:// nu mathidum
-raw_db_url = "postgresql://postgres:IjBaKJuePSfm9Of5@db.aykexjolkcwxxznlkzia.supabase.co:5432/postgres" 
+# Supabase Connection URI-ai keezhe irukkura single quotes kulla paste pannunga
+# Ippo neenga create panna v2 link-ai inga podunga
+DATABASE_URL = "postgresql://postgres:G4L2xUnZzBVJxW21@db.ynpnuitpxbskgxzzojpw.supabase.co:5432/postgres"
 
-if raw_db_url and raw_db_url.startswith("postgres://"):
-    raw_db_url = raw_db_url.replace("postgres://", "postgresql://", 1)
+# SQLAlchemy-kku 'postgresql://' prefix kandippa venum
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = raw_db_url
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -69,14 +70,14 @@ def seed_database():
         )
         db.session.add(bali_pkg)
         db.session.commit()
-        print("✅ Bali Package Seeded Successfully!")
+        print("✅ Cloud Database Initialized with Bali Package!")
 
-# Create tables and seed data
+# Create tables and seed data automatically on startup
 with app.app_context():
     db.create_all()
     seed_database()
 
-# 3. API Routes (Consistently using same keys for Frontend)
+# 3. API Routes
 @app.route('/api/packages/<destination>', methods=['GET'])
 def get_packages(destination):
     packages = Package.query.filter_by(destination=destination).all()
@@ -164,7 +165,7 @@ def chat_assistant():
             return jsonify({"reply": reply})
         return jsonify({"reply": "Try asking about Paris, Bali, or Dubai!"})
     except:
-        return jsonify({"reply": "Database error 🔄"}), 500
+        return jsonify({"reply": "Database connection error 🔄"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
