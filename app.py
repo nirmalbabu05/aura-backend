@@ -10,7 +10,7 @@ CORS(app)
 # --- DATABASE CONFIGURATION ---
 # Supabase Connection URI-ai keezhe irukkura single quotes kulla paste pannunga
 # Ippo neenga create panna v2 link-ai inga podunga
-DATABASE_URL = "postgresql://postgres:G4L2xUnZzBVJxW21@db.ynpnuitpxbskgxzzojpw.supabase.co:5432/postgres"
+DATABASE_URL = "postgresql://postgres.ynpnuitpxbskgxzzojpw:G4L2xUnZzBVJxW21@aws-1-ap-northeast-2.pooler.supabase.com:6543/postgres"
 
 # SQLAlchemy-kku 'postgresql://' prefix kandippa venum
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
