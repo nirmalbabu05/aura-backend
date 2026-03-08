@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import os
-from google import genai # PUTHU AI LIBRARY
+from google import genai
 
 # 1. App Setup
 app = Flask(__name__)
@@ -110,8 +110,6 @@ def login():
         return jsonify({"success": True, "message": "Login Successful!"}), 200
     return jsonify({"success": False, "message": "Invalid Credentials!"}), 401
 
-# 🌟 THE SMART AI CHAT ROUTE (RAG IMPLEMENTATION) 🌟
-# Ithu thaan orey oru chat route! Pazhaiyathu ellam thookiyachu!
 @app.route('/api/chat', methods=['POST'])
 def chat():
     try:
@@ -121,7 +119,6 @@ def chat():
         if not user_message:
             return jsonify({"reply": "Please say something!"}), 400
 
-        # Fetch all packages to give AI context
         packages = Package.query.all()
         
         if packages:
@@ -143,6 +140,43 @@ def chat():
     except Exception as e:
         print(f"AI Error: {e}")
         return jsonify({"reply": "Sorry, my AI brain is taking a quick nap! Please try again."}), 500
+
+# 🌟 NEW FEATURE: AI CUSTOM ITINERARY GENERATOR 🌟
+@app.route('/api/generate-itinerary', methods=['POST'])
+def generate_itinerary():
+    try:
+        data = request.json
+        dest = data.get('destination')
+        days = data.get('days')
+        budget = data.get('budget')
+        vibe = data.get('vibe')
+
+        system_prompt = f"""
+        You are an expert, luxury travel planner for 'Aura Holidays'. 
+        The user wants a {days}-day trip to {dest}.
+        Their total budget is ₹{budget}.
+        The desired travel vibe is: {vibe}.
+        
+        CRITICAL RULES FOR OUTPUT:
+        1. Write the entire response STRICTLY in clean, beautiful HTML format. Do NOT use markdown (no ```html tags).
+        2. Use <h4 style="color:#0f766e; font-weight:bold; margin-top:20px; border-bottom:1px solid #eee; padding-bottom:5px;"> for Day headings (e.g., Day 1: Arrival).
+        3. Use <ul style="list-style-type:disc; padding-left:20px; margin-bottom:15px; color:#4b5563;"> and <li> for the activities.
+        4. Bold the timings (e.g., <b>Morning:</b>).
+        5. Add a short, enthusiastic intro paragraph and a brief concluding thought at the end within <p> tags.
+        6. Keep it realistic based on the budget!
+        """
+        
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=system_prompt
+        )
+        
+        raw_html = response.text.replace('```html', '').replace('```', '').strip()
+        return jsonify({"itinerary": raw_html})
+        
+    except Exception as e:
+        print(f"AI Generator Error: {e}")
+        return jsonify({"error": "Our AI brain is taking a quick nap. Please try again!"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
