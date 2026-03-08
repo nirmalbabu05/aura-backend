@@ -35,7 +35,9 @@ with app.app_context():
     db.create_all()
 
 # --- AI CHATBOT SETUP (NEW SDK) ---
-client = genai.Client(api_key="AIzaSyBzeSFIHY5jOtL7eu_BFny6gR_GCE-6-wQ") 
+# Mela irukkura imports-la 'import os' irukkannu confirm pannikkunga.
+# Ippadi thaan exact-aa irukkanum:
+client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 # 3. API Routes
 @app.route('/api/packages/<destination>', methods=['GET'])
