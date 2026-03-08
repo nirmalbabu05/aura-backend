@@ -2,17 +2,15 @@ from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import os
+from google import genai # PUTHU AI LIBRARY
 
 # 1. App Setup
 app = Flask(__name__)
 CORS(app) 
 
 # --- DATABASE CONFIGURATION ---
-# Supabase Connection URI-ai keezhe irukkura single quotes kulla paste pannunga
-# Ippo neenga create panna v2 link-ai inga podunga
 DATABASE_URL = "postgresql://postgres.ynpnuitpxbskgxzzojpw:G4L2xUnZzBVJxW21@aws-1-ap-northeast-2.pooler.supabase.com:6543/postgres"
 
-# SQLAlchemy-kku 'postgresql://' prefix kandippa venum
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
@@ -33,49 +31,11 @@ class Package(db.Model):
     itinerary = db.Column(db.Text, nullable=True)
     inclusions = db.Column(db.String(200), nullable=True)
 
-# 🌟 AUTOMATIC DATA SEEDING (BALI PACKAGE) 🌟
-def seed_database():
-    if Package.query.count() == 0:
-        bali_itinerary = (
-            "Day 1: Arrival in Paradise & Romantic Beach Walk\n"
-            "Morning: Arrive at Denpasar Airport. Private transfer to Seminyak resort.\n"
-            "Evening: Romantic stroll along Seminyak Beach followed by Balinese dinner.\n\n"
-            "Day 2: Cultural Heart of Ubud & Swing Experience\n"
-            "Morning: Visit Tegalalang Rice Terrace and try the iconic Bali Swing.\n"
-            "Afternoon: Explore Ubud Monkey Forest and enjoy valley-view lunch.\n\n"
-            "Day 3: Island Hopping to Nusa Penida\n"
-            "Morning: Speed boat to Nusa Penida. Visit Kelingking Beach (T-Rex Bay).\n"
-            "Afternoon: Relax at Broken Beach and Angel’s Billabong.\n\n"
-            "Day 4: Temple Circuit & Sunset at Uluwatu\n"
-            "Afternoon: Visit the majestic Uluwatu Temple on the cliff.\n"
-            "Evening: Watch Kecak Fire Dance followed by seafood dinner at Jimbaran Bay.\n\n"
-            "Day 5: Spa & Relaxation\n"
-            "Morning: 2-hour Balinese Couple Spa and Flower Bath session.\n"
-            "Evening: Farewell Sunset Dinner Cruise with live music.\n\n"
-            "Day 6: Departure\n"
-            "Morning: Visit Tanah Lot Temple (The Temple in the Sea).\n"
-            "Afternoon: Private drop-off at Airport for departure."
-        )
-        
-        bali_pkg = Package(
-            destination="Bali",
-            title="Bali Honeymoon Retreat",
-            duration="5N/6D",
-            price="45,000",
-            image="bali,resort",
-            category="Honeymoon",
-            overview="Experience the ultimate romantic getaway in the 'Island of Gods'. Private villas, sunset dinners, and cultural wonders await.",
-            inclusions="5 Nights Villa, Daily Breakfast, 2 Candlelight Dinners, Private Car, Spa Session, Airport Transfers",
-            itinerary=bali_itinerary
-        )
-        db.session.add(bali_pkg)
-        db.session.commit()
-        print("✅ Cloud Database Initialized with Bali Package!")
-
-# Create tables and seed data automatically on startup
 with app.app_context():
     db.create_all()
-    seed_database()
+
+# --- AI CHATBOT SETUP (NEW SDK) ---
+client = genai.Client(api_key="AIzaSyBzeSFIHY5jOtL7eu_BFny6gR_GCE-6-wQ") 
 
 # 3. API Routes
 @app.route('/api/packages/<destination>', methods=['GET'])
@@ -150,22 +110,39 @@ def login():
         return jsonify({"success": True, "message": "Login Successful!"}), 200
     return jsonify({"success": False, "message": "Invalid Credentials!"}), 401
 
+# 🌟 THE SMART AI CHAT ROUTE (RAG IMPLEMENTATION) 🌟
+# Ithu thaan orey oru chat route! Pazhaiyathu ellam thookiyachu!
 @app.route('/api/chat', methods=['POST'])
-def chat_assistant():
+def chat():
     try:
         data = request.json
-        msg = data.get('message', '').lower()
-        if any(w in msg for w in ['hi', 'hello', 'hey']):
-            return jsonify({"reply": "Hello! 👋 I am the Aura AI Assistant. Tell me your dream destination!"})
-        all_pkgs = Package.query.all()
-        matched = [p for p in all_pkgs if p.destination.lower() in msg or p.title.lower() in msg]
-        if matched:
-            reply = "I found some amazing options! ✈️<br><br>"
-            for p in matched[:3]: reply += f"🔹 <b>{p.title}</b> ({p.duration}) - ₹{p.price}<br>"
-            return jsonify({"reply": reply})
-        return jsonify({"reply": "Try asking about Paris, Bali, or Dubai!"})
-    except:
-        return jsonify({"reply": "Database connection error 🔄"}), 500
+        user_message = data.get('message', '')
+        
+        if not user_message:
+            return jsonify({"reply": "Please say something!"}), 400
+
+        # Fetch all packages to give AI context
+        packages = Package.query.all()
+        
+        if packages:
+            pkg_list = "\n".join([f"- {p.title} ({p.destination}): {p.duration} for ₹{p.price}" for p in packages])
+            db_context = f"Here is our live database of packages:\n{pkg_list}\n\nRule: ONLY recommend packages from this list. Do not make up packages."
+        else:
+            db_context = "Currently, no packages are available."
+
+        system_prompt = f"You are a friendly AI travel assistant for Aura Holidays. Keep your answers short (2-3 sentences max) and enthusiastic.\n\n{db_context}"
+        full_prompt = f"{system_prompt}\n\nUser: {user_message}\nAI:"
+        
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=full_prompt
+        )
+        
+        return jsonify({"reply": response.text})
+        
+    except Exception as e:
+        print(f"AI Error: {e}")
+        return jsonify({"reply": "Sorry, my AI brain is taking a quick nap! Please try again."}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
