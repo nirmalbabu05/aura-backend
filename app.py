@@ -18,7 +18,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# 2. Database Model
+# 2. Database Models
 class Package(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     destination = db.Column(db.String(50), nullable=False)  
@@ -31,12 +31,20 @@ class Package(db.Model):
     itinerary = db.Column(db.Text, nullable=True)
     inclusions = db.Column(db.String(200), nullable=True)
 
+# 🌟 NEW: WISHLIST DATABASE MODEL 🌟
+class Wishlist(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_email = db.Column(db.String(120), nullable=False)
+    package_id = db.Column(db.Integer, db.ForeignKey('package.id'), nullable=False)
+    
+    # Relationship to easily fetch the actual package details later
+    package = db.relationship('Package', backref=db.backref('wishlisted_by', lazy=True))
+
+# Create tables in the database
 with app.app_context():
     db.create_all()
 
 # --- AI CHATBOT SETUP (NEW SDK) ---
-# Mela irukkura imports-la 'import os' irukkannu confirm pannikkunga.
-# Ippadi thaan exact-aa irukkanum:
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 # 3. API Routes
@@ -143,7 +151,7 @@ def chat():
         print(f"AI Error: {e}")
         return jsonify({"reply": "Sorry, my AI brain is taking a quick nap! Please try again."}), 500
 
-# 🌟 NEW FEATURE: AI CUSTOM ITINERARY GENERATOR 🌟
+# 🌟 AI CUSTOM ITINERARY GENERATOR 🌟
 @app.route('/api/generate-itinerary', methods=['POST'])
 def generate_itinerary():
     try:
@@ -179,6 +187,41 @@ def generate_itinerary():
     except Exception as e:
         print(f"AI Generator Error: {e}")
         return jsonify({"error": "Our AI brain is taking a quick nap. Please try again!"}), 500
+
+# 🌟 NEW: GET USER'S WISHLIST 🌟
+@app.route('/api/wishlist/<email>', methods=['GET'])
+def get_wishlist(email):
+    saved_items = Wishlist.query.filter_by(user_email=email).all()
+    saved_package_ids = [item.package_id for item in saved_items]
+    return jsonify(saved_package_ids), 200
+
+# 🌟 NEW: TOGGLE (ADD/REMOVE) WISHLIST ITEM 🌟
+@app.route('/api/wishlist/toggle', methods=['POST'])
+def toggle_wishlist():
+    data = request.json
+    email = data.get('email')
+    package_id = data.get('package_id')
+    action = data.get('action')
+
+    if not email or not package_id:
+        return jsonify({"error": "Email and Package ID are required"}), 400
+
+    if action == 'add':
+        existing = Wishlist.query.filter_by(user_email=email, package_id=package_id).first()
+        if not existing:
+            new_wishlist_item = Wishlist(user_email=email, package_id=package_id)
+            db.session.add(new_wishlist_item)
+            db.session.commit()
+            return jsonify({"message": "Added to wishlist"}), 201
+            
+    elif action == 'remove':
+        item_to_remove = Wishlist.query.filter_by(user_email=email, package_id=package_id).first()
+        if item_to_remove:
+            db.session.delete(item_to_remove)
+            db.session.commit()
+            return jsonify({"message": "Removed from wishlist"}), 200
+
+    return jsonify({"message": "No action taken"}), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
